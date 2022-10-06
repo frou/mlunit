@@ -2,6 +2,7 @@ signature ML_UNIT = sig
   (* Basic definitions *)
 
   datatype result = Pass
+                  (* @todo Rename the Fail constructor because it shadows the builtin exn constructor of the same name. *)
                   | Fail of string
   type testable
 
@@ -34,6 +35,9 @@ signature ML_UNIT = sig
 
   val isNonEmpty : 'a list -> string -> testable
   val isNonEmpty' : 'a list -> testable
+
+  val isRaising : string -> (unit -> 'a) -> string -> testable
+  val isRaising' : string -> (unit -> 'a) -> testable
 
   (* Running *)
 

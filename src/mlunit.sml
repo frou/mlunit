@@ -39,6 +39,39 @@ structure MLUnit : ML_UNIT = struct
   fun isNonEmpty l desc = is (fn () => pf (not (List.null l)) "List was expected to be non-empty, is empty") desc
   fun isNonEmpty' l = isNonEmpty l "is non-empty"
 
+  local
+    (* @todo Colour the whole thing yellow *)
+    (* fun formatExnMsg msg = "\"" ^ String.toCString msg ^ "\"" *)
+    fun formatExnMsg msg = "\^[[0;33m\"" ^ String.toCString msg ^ "\"\^[[0m"
+  in
+    fun isRaising expectedExnMsg f desc =
+      is
+        (fn () =>
+          let
+            val raised = (f (); NONE) handle e => SOME {e=e, msg=(exnMessage e)}
+          in
+            case raised of
+              NONE =>
+                pf false ("Expected exception " ^ (formatExnMsg expectedExnMsg) ^ " to be raised, but none was")
+            | SOME {e, msg} =>
+                (*
+                @todo Just compare based on exnName rather than exnMessage?
+                @body Using exnMessage is more accurate and elimits false positives,
+                @body but the format is the message varies between SML implementations
+                @body so that that makes tests brittle?
+                @body Though, both MLton and SML/NJ (https://www.tutorialspoint.com/execute_smlnj_online.php)
+                @body seem to use the same format.
+                *)
+                pf
+                  (msg = expectedExnMsg)
+                  ("Expected exception " ^ (formatExnMsg expectedExnMsg) ^ " to be raised, but exception " ^ (formatExnMsg msg) ^ " was")
+          end
+        )
+        desc
+    fun isRaising' expectedExnMsg f =
+      isRaising expectedExnMsg f ("raises " ^ formatExnMsg expectedExnMsg)
+  end
+
   (* Running *)
 
   datatype testable_result = TestResult of string * result
@@ -64,9 +97,9 @@ structure MLUnit : ML_UNIT = struct
   type reporter = testable_result -> string
 
   fun reportToplevel res = (report 0 res) ^ "\n\n" ^ (stats res)
-  and report depth (TestResult (desc, Pass)) = pad depth "O " ^ desc
-    | report depth (TestResult (desc, Fail msg)) = pad depth "X " ^ desc ^ " - error: " ^ msg
-    | report depth (SuiteResult (desc, body)) = let val first = pad depth ("Suite " ^ desc ^ ":")
+  and report depth (TestResult (desc, Pass)) = pad depth "\^[[0;32mO\^[[0m " ^ desc
+    | report depth (TestResult (desc, Fail msg)) = pad depth "\^[[0;31mX\^[[0m " ^ desc ^ " - error: " ^ msg
+    | report depth (SuiteResult (desc, body)) = let val first = pad depth ("\^[[0;36m" ^ desc ^ ":\^[[0m")
                                                     and rest = map (fn t => report (depth + 1) t) body
                                                 in
                                                     String.concatWith "\n" (first :: rest)
@@ -75,6 +108,16 @@ structure MLUnit : ML_UNIT = struct
   and stats res = "Tests:  " ^ (Int.toString (count_tests res)) ^ "\n" ^
                   "Passed: " ^ (Int.toString (count_passed res)) ^ "\n" ^
                   "Failed: " ^ (Int.toString (count_failed res))
+
+(*
+Tests:  4
+Passed: 3  // green if 100% (allPass)
+Failed: 1  // red if not 0% (anyFail)
+
+fun colored (s: string, positive: bool) : string =
+  (* remember isatty, also https://no-color.org *)
+
+*)
 
 
   val defaultReporter = reportToplevel
