@@ -2,7 +2,8 @@ signature ML_UNIT = sig
   (* Basic definitions *)
 
   datatype result = Pass
-                  (* @todo Rename the Fail constructor because it shadows the builtin exn constructor of the same name. *)
+                  (* @todo Rename the Fail constructor because it shadows the builtin exn constructor of the same name.
+                     Therefore, TestPass and TestFail *)
                   | Fail of string
   type testable
 
